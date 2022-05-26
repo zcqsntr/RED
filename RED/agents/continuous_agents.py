@@ -9,6 +9,7 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 import gc
 
 import os
+from time import time
 
 class DRPG_agent():
     def __init__(self, layer_sizes, learning_rate = 0.001, critic=True):
@@ -267,6 +268,7 @@ class RT3D_agent():
         opt = keras.optimizers.Adam(learning_rate=val_learning_rate)
         self.Q2_target.compile(optimizer=opt, loss='mean_squared_error')
 
+        # TODO:: pre initialise all of these as numpy arrays
         self.values = []
         self.actions = []
         self.states = []
@@ -427,12 +429,18 @@ class RT3D_agent():
             e_rewards = []
             sequence = [[0]*self.layer_sizes[1]]
             for j, transition in enumerate(trajectory):
-                self.sequences.append(copy.deepcopy(sequence))
+
+                if recurrent:
+                    self.sequences.append(pad_sequences(copy.deepcopy([sequence]), maxlen=self.max_length, dtype='float64')[0])
+                    #self.sequences.append(copy.deepcopy(sequence))
                 state, action, reward, next_state, done = transition
 
                 sequence.append(np.concatenate((state, action)))
                 #one_hot_a = np.array([int(i == action) for i in range(self.layer_sizes[-1])])/10
-                self.next_sequences.append(copy.deepcopy(sequence))
+
+                if recurrent:
+                    self.next_sequences.append(pad_sequences(copy.deepcopy([sequence]), maxlen=self.max_length, dtype='float64')[0])
+                    #self.next_sequences.append(copy.deepcopy(sequence))
                 self.states.append(state)
                 self.next_states.append(next_state)
                 self.actions.append(action)
@@ -464,9 +472,13 @@ class RT3D_agent():
 
 
 
+
+        # t = time()
         if recurrent:
-            padded = pad_sequences(self.sequences, maxlen = self.max_length, dtype='float64')[:self.mem_size]
-            next_padded = pad_sequences(self.next_sequences, maxlen=self.max_length, dtype='float64')[:self.mem_size]
+            padded = np.array(self.sequences)
+            next_padded = np.array(self.next_sequences)
+        #
+        # print('pad:', time()-t)
 
         # TODO: this is really memory inefficient, take random sample before initialising arrays
         next_states = np.array(self.next_states, dtype=np.float64)[:self.mem_size]
@@ -475,6 +487,9 @@ class RT3D_agent():
         states = np.array(self.states)[:self.mem_size]
         actions = np.array(self.actions)[:self.mem_size]
         all_returns = np.array(self.all_returns)[:self.mem_size]
+        padded = np.array(self.sequences)[:self.mem_size]
+        next_padded = np.array(self.next_sequences)[:self.mem_size]
+
 
         self.memory = []  # reset memory after this information has been extracted
 
@@ -513,6 +528,7 @@ class RT3D_agent():
                 next_padded = next_padded[indices]
 
         #values = self.predict([states, padded])
+
 
         if monte_carlo:
             targets = all_returns
@@ -560,6 +576,8 @@ class RT3D_agent():
         inputs = [states, padded] if recurrent else [states]
         #print('inputs, actions, targets', inputs[0].shape, actions.shape, targets.shape)
         gc.collect() # clear ol dstuff from memory
+
+
         return inputs, actions, targets
 
     def get_inputs_targets_low_mem(self, recurrent = True, monte_carlo = False, fitted = False):
@@ -698,6 +716,8 @@ class RT3D_agent():
         :param low_mem:
         :return:
         '''
+
+
         if low_mem:
             inputs, actions, targets = self.get_inputs_targets_low_mem(recurrent=recurrent, monte_carlo=monte_carlo,
                                                                        fitted=fitted)
@@ -705,10 +725,12 @@ class RT3D_agent():
             inputs, actions, targets = self.get_inputs_targets(recurrent=recurrent, monte_carlo=monte_carlo,
                                                                fitted=fitted)
 
+
         if recurrent:
             states, sequences = inputs
         else:
             states = inputs[0]
+
 
         if fitted:
             epochs = 500
@@ -724,12 +746,14 @@ class RT3D_agent():
             patience = 1
             callbacks = []
 
+
         if recurrent:
             history1 = self.Q1_network.fit([tf.concat((states, actions), 1), sequences], targets, epochs = epochs, verbose = verbose, validation_split =0., batch_size=self.batch_size, callbacks = callbacks)
             history2 = self.Q2_network.fit([tf.concat((states, actions), 1), sequences], targets, epochs = epochs, verbose = verbose, validation_split =0., batch_size=self.batch_size, callbacks = callbacks)
         else:
             history1 = self.Q1_network.fit([tf.concat((states, actions), 1)], targets, epochs = epochs, verbose = False, validation_split =0., batch_size=self.batch_size, callbacks = callbacks)
             history2 = self.Q2_network.fit([tf.concat((states, actions), 1)], targets, epochs = epochs, verbose = False, validation_split =0., batch_size=self.batch_size, callbacks = callbacks)
+
 
 
         if policy:
@@ -778,10 +802,14 @@ class RT3D_agent():
 
             #print('Policy epochs: ', len(epoch_losses), epoch_losses[0], epoch_losses[-1])
 
+
+
         if not fitted and not monte_carlo and policy: # update target nbetworks when we update the policy
             self.update_target_network(self.Q1_network, self.Q1_target, self.polyak)
             self.update_target_network(self.Q2_network, self.Q2_target, self.polyak)
             self.update_target_network(self.policy_network, self.policy_target, self.polyak)
+
+
 
 
     def save_network(self, save_path): # tested
