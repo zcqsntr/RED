@@ -269,6 +269,20 @@ class RT3D_agent():
         self.Q2_target.compile(optimizer=opt, loss='mean_squared_error')
 
         # TODO:: pre initialise all of these as numpy arrays
+        # next_states = np.zeros(self.mem_size, self.max_length, self.layer_sizes[0])
+        # states = np.zeros(self.mem_size, self.max_length, self.layer_sizes[0])
+        # actions = np.zeros(self.mem_size, self.max_length, self.layer_sizes[0])
+        #
+        #
+        # rewards = np.array(self.rewards).reshape(-1, 1)[:self.mem_size]
+        # dones = np.array(self.dones).reshape(-1, 1)[:self.mem_size]
+        #
+        # actions = np.array(self.actions)[:self.mem_size]
+        # all_returns = np.array(self.all_returns)[:self.mem_size]
+        # padded = np.array(self.sequences)[:self.mem_size]
+        # next_padded = np.array(self.next_sequences)[:self.mem_size]
+
+
         self.values = []
         self.actions = []
         self.states = []
