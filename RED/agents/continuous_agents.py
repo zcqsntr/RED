@@ -474,14 +474,15 @@ class RT3D_agent():
             #
             # remove items if agents memroy is full
 
-            if len(self.states) > self.mem_size:
-                del self.sequences[:len(self.states)-self.mem_size]
-                del self.next_sequences[:len(self.states)-self.mem_size]
-                del self.next_states[:len(self.states)-self.mem_size]
-                del self.actions[:len(self.states)-self.mem_size]
-                del self.rewards[:len(self.states)-self.mem_size]
-                del self.dones[:len(self.states)-self.mem_size]
-                del self.states[:len(self.states) - self.mem_size]
+        if len(self.states) > self.mem_size:
+            del self.sequences[:len(self.states)-self.mem_size]
+            del self.next_sequences[:len(self.states)-self.mem_size]
+            del self.next_states[:len(self.states)-self.mem_size]
+            del self.actions[:len(self.states)-self.mem_size]
+            del self.rewards[:len(self.states)-self.mem_size]
+            del self.dones[:len(self.states)-self.mem_size]
+            del self.states[:len(self.states) - self.mem_size]
+
 
 
 
