@@ -19,11 +19,45 @@ class DRPG_agent(nn.module):
       self.actor_network = self.initialise_network(layer_sizes)
       self.actor_optimizer = optim.Adam(self.actor_network.parameters(),lr=learning_rate)
       
-      self.values=[]
-      self.actions=[]
+      self.values = []
+      self.actions = []
+      self.states = []
+      self.next_states = []
+      self.actions = []
+      self.rewards = []
+      self.dones = []
+      self.sequences = []
+      self.next_sequences = []
+      self.all_values = []
    
       
       // In Progress
+   def initialise_network(self,layer_sizes, critic_nw=False):
+        input_size, sequence_size, rec_sizes, hidden_sizes, output_size = layer_sizes
+        layers = []
+
+        self.sequence_input_size = (None, sequence_size)
+        self.input_size = input_size
+        self.hidden_sizes = hidden_sizes
+
+        for i, rec_size in enumerate(rec_sizes):
+            layers.append(nn.GRU(input_size=sequence_size, hidden_size=rec_size, batch_first=True))
+
+        layers.append(nn.Linear(input_size + rec_size, hidden_sizes[0]))
+        layers.append(nn.ReLU())
+
+        for i, hl_size in enumerate(hidden_sizes[1:]):
+            layers.append(nn.Linear(hidden_sizes[i], hl_size))
+            layers.append(nn.ReLU())
+
+        if critic_nw:
+            layers.append(nn.Linear(hidden_sizes[-1], 1))
+        else:
+            layers.append(nn.Linear(hidden_sizes[-1], output_size))
+            layers.append(nn.Sigmoid())
+            layers.append(nn.Linear(hidden_sizes[-1], output_size))
+
+        return nn.Sequential(*layers)  
       
       
       
